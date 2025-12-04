@@ -33,8 +33,12 @@ class InMemoryServerTransport implements ServerTransport {
           _messageController.add(message);
         }
       },
-      onError: (error) {
+      onError: (error, stackTrace) {
         _logger.debug('Inbound stream error: $error');
+        if (!_closeCompleter.isCompleted) {
+          _closeCompleter.completeError(error, stackTrace);
+        }
+        close();
       },
       onDone: () {
         _logger.debug('Inbound stream done');
