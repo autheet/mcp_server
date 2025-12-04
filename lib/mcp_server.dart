@@ -4,12 +4,14 @@ import 'package:shelf/shelf.dart' as shelf;
 
 import 'src/server/server.dart';
 import 'src/transport/transport.dart';
+import 'src/transport/in_memory_transport.dart';
 import 'src/protocol/capabilities.dart';
 import 'src/common/result.dart';
 
 export 'src/models/models.dart';
 export 'src/server/server.dart';
 export 'src/transport/transport.dart';
+export 'src/transport/in_memory_transport.dart';
 export 'src/protocol/protocol.dart';
 export 'src/protocol/capabilities.dart';
 export 'src/annotations/tool_annotations.dart';
@@ -76,13 +78,13 @@ class McpServerConfig {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is McpServerConfig &&
-      name == other.name &&
-      version == other.version &&
-      capabilities == other.capabilities &&
-      enableDebugLogging == other.enableDebugLogging &&
-      maxConnections == other.maxConnections &&
-      requestTimeout == other.requestTimeout &&
-      enableMetrics == other.enableMetrics;
+          name == other.name &&
+          version == other.version &&
+          capabilities == other.capabilities &&
+          enableDebugLogging == other.enableDebugLogging &&
+          maxConnections == other.maxConnections &&
+          requestTimeout == other.requestTimeout &&
+          enableMetrics == other.enableMetrics;
 
   @override
   int get hashCode => Object.hash(
@@ -96,7 +98,8 @@ class McpServerConfig {
   );
 
   @override
-  String toString() => 'McpServerConfig('
+  String toString() =>
+      'McpServerConfig('
       'name: $name, '
       'version: $version, '
       'capabilities: $capabilities, '
@@ -219,7 +222,6 @@ final class StreamableHttpTransportConfig extends TransportConfig {
 @Deprecated('Use SseTransportConfig instead')
 typedef SseServerConfig = SseTransportConfig;
 
-
 typedef MCPServer = McpServer;
 
 /// Modern MCP Server factory with enhanced configuration and error handling
@@ -243,6 +245,11 @@ class McpServer {
   /// Create a stdio transport
   static Result<StdioServerTransport, Exception> createStdioTransport() {
     return Results.catching(() => StdioServerTransport());
+  }
+
+  /// Create an in-memory transport
+  static Result<InMemoryServerTransport, Exception> createInMemoryTransport() {
+    return Results.catching(() => InMemoryServerTransport());
   }
 
   /// Create and start a server using the provided configuration and transport
@@ -270,14 +277,16 @@ class McpServer {
         fallbackPorts: final fallbackPorts,
         authToken: final authToken,
       ) =>
-        Future.value(SseServerTransport(
-          endpoint: endpoint,
-          messagesEndpoint: messagesEndpoint,
-          host: host,
-          port: port,
-          fallbackPorts: fallbackPorts,
-          authToken: authToken,
-        )),
+        Future.value(
+          SseServerTransport(
+            endpoint: endpoint,
+            messagesEndpoint: messagesEndpoint,
+            host: host,
+            port: port,
+            fallbackPorts: fallbackPorts,
+            authToken: authToken,
+          ),
+        ),
       StreamableHttpTransportConfig(
         host: final host,
         port: final port,
@@ -338,16 +347,18 @@ class McpServer {
     return McpServerConfig(
       name: name,
       version: version,
-      capabilities: capabilities ?? ServerCapabilities.simple(
-        tools: true,
-        toolsListChanged: true,
-        resources: true,
-        resourcesListChanged: true,
-        prompts: true,
-        promptsListChanged: true,
-        logging: true,
-        progress: true,
-      ),
+      capabilities:
+          capabilities ??
+          ServerCapabilities.simple(
+            tools: true,
+            toolsListChanged: true,
+            resources: true,
+            resourcesListChanged: true,
+            prompts: true,
+            promptsListChanged: true,
+            logging: true,
+            progress: true,
+          ),
       enableDebugLogging: false,
       maxConnections: 1000,
       requestTimeout: const Duration(seconds: 60),
@@ -360,19 +371,21 @@ class McpServer {
   static Result<SseServerTransport, Exception> createSseTransport(
     SseTransportConfig config,
   ) {
-    return Results.catching(() => SseServerTransport(
-      endpoint: config.endpoint,
-      messagesEndpoint: config.messagesEndpoint,
-      host: config.host,
-      port: config.port,
-      fallbackPorts: config.fallbackPorts,
-      authToken: config.authToken,
-    ));
+    return Results.catching(
+      () => SseServerTransport(
+        endpoint: config.endpoint,
+        messagesEndpoint: config.messagesEndpoint,
+        host: config.host,
+        port: config.port,
+        fallbackPorts: config.fallbackPorts,
+        authToken: config.authToken,
+      ),
+    );
   }
 
-
   /// Create a StreamableHTTP transport with the given configuration
-  static Future<Result<StreamableHttpServerTransport, Exception>> createStreamableHttpTransportAsync(
+  static Future<Result<StreamableHttpServerTransport, Exception>>
+  createStreamableHttpTransportAsync(
     int port, {
     String endpoint = '/mcp',
     String host = 'localhost',
@@ -396,12 +409,15 @@ class McpServer {
       await transport.start();
       return Result.success(transport);
     } catch (e) {
-      return Result.failure(Exception('Failed to create StreamableHTTP transport: $e'));
+      return Result.failure(
+        Exception('Failed to create StreamableHTTP transport: $e'),
+      );
     }
   }
 
   /// Create a StreamableHTTP transport with the given configuration (sync version)
-  static Result<StreamableHttpServerTransport, Exception> createStreamableHttpTransport(
+  static Result<StreamableHttpServerTransport, Exception>
+  createStreamableHttpTransport(
     int port, {
     String endpoint = '/mcp',
     String host = 'localhost',
@@ -424,5 +440,4 @@ class McpServer {
       return transport;
     });
   }
-
 }
